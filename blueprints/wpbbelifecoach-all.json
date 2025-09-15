@@ -1,0 +1,42 @@
+{
+  "preferredVersions": {
+    "php": "8.4",
+    "wp": "6.8"
+  },
+  "features": {},
+  "login": true,
+  "landingPage": "/wp-admin/edit.php",
+  "plugins": [],
+  "steps": [
+    {
+      "step": "resetData"
+    },
+    {
+      "step": "installTheme",
+      "themeData": {
+        "resource": "url",
+        "url": "https://raw.githubusercontent.com/Dream-Theme/better-block-editor-playground-experiments/refs/heads/main/better-block-theme.zip"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://raw.githubusercontent.com/Dream-Theme/better-block-editor-playground-experiments/refs/heads/main/better-block-editor-0_8_0_f.zip"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "importWxr",
+      "file": {
+        "resource": "url",
+        "url": "https://raw.githubusercontent.com/Dream-Theme/better-block-editor-playground-experiments/refs/heads/main/wpbbelifecoach.all.xml"
+      }
+    }
+  ]
+}
