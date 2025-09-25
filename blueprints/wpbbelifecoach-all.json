@@ -37,6 +37,15 @@
         "resource": "url",
         "url": "https://raw.githubusercontent.com/Dream-Theme/better-block-editor-playground-experiments/refs/heads/main/wpbbelifecoach.all.xml"
       }
+    },
+    ,
+    {
+      "step": "setSiteOptions",
+      "options": {
+        "show_on_front": "page",
+        "page_on_front": 25,
+        "page_for_posts": 79
+      }
     }
   ]
 }
