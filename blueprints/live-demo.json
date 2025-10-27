@@ -1,0 +1,50 @@
+{
+  "preferredVersions": {
+    "php": "8.4",
+    "wp": "6.8"
+  },
+  "features": {},
+  "login": true,
+  "landingPage": "/",
+  "plugins": [],
+  "steps": [
+    {
+      "step": "resetData"
+    },
+    {
+      "step": "installTheme",
+      "themeData": {
+        "resource": "url",
+        "url": "https://raw.githubusercontent.com/Dream-Theme/better-block-editor-playground-experiments/refs/heads/main/better-block-theme.zip"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://raw.githubusercontent.com/Dream-Theme/better-block-editor-playground-experiments/refs/heads/main/better-block-editor.zip"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "importWxr",
+      "file": {
+        "resource": "url",
+        "url": "https://gist.githubusercontent.com/greenworld/1dbbcc3d04a66fbf5e17db6060abbd53/raw/ba51a3e92d133afd4b7198ea8e862b8654e2be6c/export-no-attachments-with-resize.xml"
+      }
+    },
+    {
+      "step": "runPHP",
+      "code": "<?php require '/wordpress/wp-load.php'; $home_slug='home'; $posts_slug='blog'; function find_page_id_by_slug($slug){$page=get_page_by_path($slug,OBJECT,'page');return $page?intval($page->ID):0;} $home_id=find_page_id_by_slug($home_slug); $posts_id=find_page_id_by_slug($posts_slug); if($home_id||$posts_id){update_option('show_on_front','page');} if($home_id){update_option('page_on_front',$home_id);error_log('✅ Homepage set to slug='.$home_slug.' (ID='.$home_id.')');}else{error_log('⚠️ Homepage not found for slug='.$home_slug);} if($posts_id){update_option('page_for_posts',$posts_id);error_log('✅ Posts page set to slug='.$posts_slug.' (ID='.$posts_id.')');}else{error_log('⚠️ Posts page not found for slug='.$posts_slug);} flush_rewrite_rules(false); ?>"
+    },
+    {
+      "step": "runPHP",
+      "code": "<?php require '/wordpress/wp-load.php'; $icon_title='site-icon'; $icon=get_page_by_title($icon_title,OBJECT,'attachment'); if($icon){update_option('site_logo',$icon->ID); error_log('✅ Site iogo set to attachment ID '.$icon->ID.' (title='.$icon_title.')');update_option('site_icon',$icon->ID); error_log('✅ Site icon set to attachment ID '.$icon->ID.' (title='.$icon_title.')');}else{error_log('⚠️ Site icon attachment not found (title='.$icon_title.')');} ?>"
+    }
+  ]
+}
