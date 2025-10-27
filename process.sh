@@ -175,14 +175,43 @@ while IFS= read -r thumb_id; do
   fi
 done < "$THUMB_IDS_FILE"
 
-# Add thumbnail URLs to main attachment list (avoid duplicates)
-if [[ -s "$THUMB_URLS_FILE" ]]; then
-  cat "$ATT_LIST" "$THUMB_URLS_FILE" | sort -u > "${ATT_LIST}.tmp" && mv "${ATT_LIST}.tmp" "$ATT_LIST"
+# --- 1.6) extract site-icon attachments ---
+echo "1.6) Processing site-icon attachments..."
+SITEICON_IDS_FILE="./build/logs/site_icon_ids_${TS}.txt"
+SITEICON_URLS_FILE="./build/logs/site_icon_urls_${TS}.txt"
+: > "$SITEICON_IDS_FILE"
+: > "$SITEICON_URLS_FILE"
+
+# Find site-icon attachments by title
+xmlstarlet sel -N wp="http://wordpress.org/export/1.2/" \
+  -t -m "//item[wp:post_type='attachment' and contains(translate(title, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'site-icon')]" \
+  -v "wp:post_id" -n "$IN" \
+  | sed '/^\s*$/d' | sort -u > "$SITEICON_IDS_FILE" || true
+
+# For each site-icon ID, find the corresponding attachment URL
+while IFS= read -r siteicon_id; do
+  [[ -z "$siteicon_id" ]] && continue
+  siteicon_url=$(xmlstarlet sel -N wp="http://wordpress.org/export/1.2/" \
+    -t -v "//item[wp:post_type='attachment' and wp:post_id='$siteicon_id']/wp:attachment_url" "$IN" 2>/dev/null || true)
+  if [[ -n "$siteicon_url" ]]; then
+    echo "$siteicon_url" >> "$SITEICON_URLS_FILE"
+    echo "Found site-icon: ID=$siteicon_id URL=$siteicon_url"
+  else
+    echo "Warning: Site-icon attachment URL not found for ID: $siteicon_id"
+  fi
+done < "$SITEICON_IDS_FILE"
+
+# Add thumbnail and site-icon URLs to main attachment list (avoid duplicates)
+if [[ -s "$THUMB_URLS_FILE" || -s "$SITEICON_URLS_FILE" ]]; then
+  cat "$ATT_LIST" "$THUMB_URLS_FILE" "$SITEICON_URLS_FILE" 2>/dev/null | sort -u > "${ATT_LIST}.tmp" && mv "${ATT_LIST}.tmp" "$ATT_LIST"
 fi
 
 NUM_THUMB_IDS=$(wc -l < "$THUMB_IDS_FILE" 2>/dev/null || echo 0)
 NUM_THUMB_URLS=$(wc -l < "$THUMB_URLS_FILE" 2>/dev/null || echo 0)
+NUM_SITEICON_IDS=$(wc -l < "$SITEICON_IDS_FILE" 2>/dev/null || echo 0)
+NUM_SITEICON_URLS=$(wc -l < "$SITEICON_URLS_FILE" 2>/dev/null || echo 0)
 echo "Found $NUM_THUMB_IDS thumbnail ID(s), resolved $NUM_THUMB_URLS URL(s)"
+echo "Found $NUM_SITEICON_IDS site-icon ID(s), resolved $NUM_SITEICON_URLS URL(s)"
 
 # --- 2) extract http(s) URLs inside CDATA blocks (safe: only URLs that include OLD_HOST) ---
 echo "2) Extracting URLs from content that contain $OLD_HOST..."
@@ -227,13 +256,13 @@ if [[ ! -s "$REF_IDS_FILE" ]]; then
   ' "$IN" | sort -u > "$REF_IDS_FILE" || true
 fi
 
-# Merge thumbnail IDs with referenced IDs to ensure all are kept
-if [[ -s "$THUMB_IDS_FILE" ]]; then
-  cat "$REF_IDS_FILE" "$THUMB_IDS_FILE" | sort -u > "${REF_IDS_FILE}.tmp" && mv "${REF_IDS_FILE}.tmp" "$REF_IDS_FILE"
+# Merge thumbnail IDs and site-icon IDs with referenced IDs to ensure all are kept
+if [[ -s "$THUMB_IDS_FILE" || -s "$SITEICON_IDS_FILE" ]]; then
+  cat "$REF_IDS_FILE" "$THUMB_IDS_FILE" "$SITEICON_IDS_FILE" 2>/dev/null | sort -u > "${REF_IDS_FILE}.tmp" && mv "${REF_IDS_FILE}.tmp" "$REF_IDS_FILE"
 fi
 
 NUM_REF_IDS=$(wc -l < "$REF_IDS_FILE" 2>/dev/null || echo 0)
-echo "Found $NUM_REF_IDS total referenced attachment imageID(s) (including thumbnails)."
+echo "Found $NUM_REF_IDS total referenced attachment imageID(s) (including thumbnails and site-icons)."
 # Debug preview
 if [[ "$NUM_REF_IDS" -gt 0 ]]; then
   echo "First IDs: $(head -n 10 "$REF_IDS_FILE" | paste -sd, -)"
@@ -401,6 +430,7 @@ echo "Mapping log      : $MAPLOG"
 echo "Download errors  : $ERRORLOG (if non-empty)"
 echo "Resized images   : $NUM_RESIZED (only those with original attachment)"
 echo "Thumbnail attachments: $NUM_THUMB_URLS (from _thumbnail_id metadata)"
+echo "Site-icon attachments: $NUM_SITEICON_URLS (from title matching 'site-icon')"
 echo "Referenced imageIDs: $NUM_REF_IDS (these attachment items will be kept)"
 
 # check for remaining occurrences of OLD_HOST in output (quick sanity)
