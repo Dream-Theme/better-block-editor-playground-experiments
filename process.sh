@@ -149,6 +149,41 @@ xmlstarlet sel -N wp="http://wordpress.org/export/1.2/" \
   -t -m "//item[wp:post_type='attachment']" -v "wp:attachment_url" -n "$IN" \
   | sed '/^\s*$/d' > "$ATT_LIST" || true
 
+# --- 1.5) extract thumbnail attachment IDs and add their URLs to download list ---
+echo "1.5) Processing thumbnail attachments from _thumbnail_id metadata..."
+THUMB_IDS_FILE="./build/logs/thumbnail_ids_${TS}.txt"
+THUMB_URLS_FILE="./build/logs/thumbnail_urls_${TS}.txt"
+: > "$THUMB_IDS_FILE"
+: > "$THUMB_URLS_FILE"
+
+# Extract thumbnail IDs from postmeta
+xmlstarlet sel -N wp="http://wordpress.org/export/1.2/" \
+  -t -m "//item[wp:post_type!='attachment']/wp:postmeta[wp:meta_key='_thumbnail_id']" \
+  -v "wp:meta_value" -n "$IN" \
+  | sed '/^\s*$/d' | sort -u > "$THUMB_IDS_FILE" || true
+
+# For each thumbnail ID, find the corresponding attachment URL
+while IFS= read -r thumb_id; do
+  [[ -z "$thumb_id" ]] && continue
+  thumb_url=$(xmlstarlet sel -N wp="http://wordpress.org/export/1.2/" \
+    -t -v "//item[wp:post_type='attachment' and wp:post_id='$thumb_id']/wp:attachment_url" "$IN" 2>/dev/null || true)
+  if [[ -n "$thumb_url" ]]; then
+    echo "$thumb_url" >> "$THUMB_URLS_FILE"
+    echo "Found thumbnail: ID=$thumb_id URL=$thumb_url"
+  else
+    echo "Warning: Thumbnail attachment not found for ID: $thumb_id"
+  fi
+done < "$THUMB_IDS_FILE"
+
+# Add thumbnail URLs to main attachment list (avoid duplicates)
+if [[ -s "$THUMB_URLS_FILE" ]]; then
+  cat "$ATT_LIST" "$THUMB_URLS_FILE" | sort -u > "${ATT_LIST}.tmp" && mv "${ATT_LIST}.tmp" "$ATT_LIST"
+fi
+
+NUM_THUMB_IDS=$(wc -l < "$THUMB_IDS_FILE" 2>/dev/null || echo 0)
+NUM_THUMB_URLS=$(wc -l < "$THUMB_URLS_FILE" 2>/dev/null || echo 0)
+echo "Found $NUM_THUMB_IDS thumbnail ID(s), resolved $NUM_THUMB_URLS URL(s)"
+
 # --- 2) extract http(s) URLs inside CDATA blocks (safe: only URLs that include OLD_HOST) ---
 echo "2) Extracting URLs from content that contain $OLD_HOST..."
 CONTENT_URLS="./build/logs/content_urls_${TS}.txt"
@@ -192,8 +227,13 @@ if [[ ! -s "$REF_IDS_FILE" ]]; then
   ' "$IN" | sort -u > "$REF_IDS_FILE" || true
 fi
 
+# Merge thumbnail IDs with referenced IDs to ensure all are kept
+if [[ -s "$THUMB_IDS_FILE" ]]; then
+  cat "$REF_IDS_FILE" "$THUMB_IDS_FILE" | sort -u > "${REF_IDS_FILE}.tmp" && mv "${REF_IDS_FILE}.tmp" "$REF_IDS_FILE"
+fi
+
 NUM_REF_IDS=$(wc -l < "$REF_IDS_FILE" 2>/dev/null || echo 0)
-echo "Found $NUM_REF_IDS referenced attachment imageID(s) in svg-inline blocks."
+echo "Found $NUM_REF_IDS total referenced attachment imageID(s) (including thumbnails)."
 # Debug preview
 if [[ "$NUM_REF_IDS" -gt 0 ]]; then
   echo "First IDs: $(head -n 10 "$REF_IDS_FILE" | paste -sd, -)"
@@ -315,7 +355,7 @@ fi
 
 # After attachment_url rewrite, update <guid> for referenced attachment items
 if [[ -s "$REF_IDS_FILE" ]]; then
-  echo "Updating <guid> of referenced attachment items to NEW_BASE..."
+  echo "Updating <guid> of referenced attachment items (including thumbnails) to NEW_BASE..."
   while IFS= read -r aid; do
     [[ -z "$aid" ]] && continue
     guid_val="$(xmlstarlet sel -N wp="http://wordpress.org/export/1.2/" \
@@ -360,6 +400,7 @@ echo "Logs             : ./build/logs/"
 echo "Mapping log      : $MAPLOG"
 echo "Download errors  : $ERRORLOG (if non-empty)"
 echo "Resized images   : $NUM_RESIZED (only those with original attachment)"
+echo "Thumbnail attachments: $NUM_THUMB_URLS (from _thumbnail_id metadata)"
 echo "Referenced imageIDs: $NUM_REF_IDS (these attachment items will be kept)"
 
 # check for remaining occurrences of OLD_HOST in output (quick sanity)
