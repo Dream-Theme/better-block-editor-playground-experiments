@@ -1,6 +1,6 @@
 {
   "preferredVersions": {
-    "php": "7.4",
+    "php": "8.4",
     "wp": "6.8"
   },
   "features": {},
