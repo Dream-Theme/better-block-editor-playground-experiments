@@ -45,6 +45,12 @@
     {
       "step": "runPHP",
       "code": "<?php require '/wordpress/wp-load.php'; $icon_title='site-icon'; $icon=get_page_by_title($icon_title,OBJECT,'attachment'); if($icon){update_option('site_logo',$icon->ID); error_log('✅ Site iogo set to attachment ID '.$icon->ID.' (title='.$icon_title.')');update_option('site_icon',$icon->ID); error_log('✅ Site icon set to attachment ID '.$icon->ID.' (title='.$icon_title.')');}else{error_log('⚠️ Site icon attachment not found (title='.$icon_title.')');} ?>"
+    },
+    {
+      "step": "setSiteOptions",
+      "options": {
+        "blogname": "BBE Live Demo"
+      }
     }
   ]
 }
