@@ -24,8 +24,8 @@
     {
       "step": "installPlugin",
       "pluginData": {
-        "resource": "url",
-        "url": "https://raw.githubusercontent.com/Dream-Theme/better-block-editor-playground-experiments/refs/heads/main/better-block-editor.zip"
+        "resource": "wordpress.org/plugins",
+        "slug": "better-block-editor"
       },
       "options": {
         "activate": true
