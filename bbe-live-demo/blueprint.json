@@ -35,7 +35,7 @@
       "step": "importWxr",
       "file": {
         "resource": "url",
-        "url": "https://gist.githubusercontent.com/greenworld/1dbbcc3d04a66fbf5e17db6060abbd53/raw/ba51a3e92d133afd4b7198ea8e862b8654e2be6c/export-no-attachments-with-resize.xml"
+        "url": "https://raw.githubusercontent.com/Dream-Theme/better-block-editor-playground-experiments/refs/heads/main/bbe-live-demo/prepared-export.xml"
       }
     },
     {
